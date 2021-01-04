@@ -16,7 +16,8 @@ buildscript {
 apply<KorgeGradlePlugin>()
 
 korge {
-	id = "com.danik.danik"
+	id = "com.danik.NumberGame"
+	name = "NumberGame"
 // To enable all targets at once
 
 	//targetAll()
