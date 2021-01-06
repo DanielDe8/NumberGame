@@ -41,10 +41,11 @@ class Hra() : Container() {
     val widthNum  = 550
     val heightNum = 550
 
-    var tvojeCislo = 10
+    var tvojeCislo = 1
     val tvojeCisloText = text("$tvojeCislo", 100.0)
 
     var casovacNepratele = 0
+    val nepratele = arrayListOf<NepratelskeCislo>()
 
     init {
         fixedSizeContainer(widthNum.toDouble(), heightNum.toDouble())
@@ -55,6 +56,9 @@ class NepratelskeCislo(val cislo: Int, posX: Double, posY: Double) : Container()
     var cislo2 = cislo
     val rect = roundRect(50, 50, 10)
     val text = text("$cislo2" ,50.0, Colors.BLACK)
+
+    val posX2 = posX
+    val posY2 = posY
 
     init {
         x = posX
@@ -90,17 +94,27 @@ suspend fun main() = Korge(
         hra.tvojeCisloText.text = ("${hra.tvojeCislo}")
         hra.casovacNepratele++
 
+        if(hra.tvojeCislo < 1) {
+            //gameWindow.close()
+            text("Game Over!").apply {
+                fontSize = 80.0
+            }
+        }
+
+        for (n in hra.nepratele) {
+            n.x += (hra.tvojeCisloText.x - n.x) * 0.01
+            n.y += 2
+            if (n.y >= hra.tvojeCisloText.y) {
+                hra.tvojeCislo -= n.cislo2
+                n.removeFromParent()
+            }
+        }
+        hra.nepratele.removeAll { n -> n.y >= hra.tvojeCisloText.y }
+
         if (hra.casovacNepratele == 60 * 3) {
             val nepratel = vytvorNepratele(hra)
+            hra.nepratele.add(nepratel)
 
-            GlobalScope.launch {
-                nepratel.moveTo(hra.tvojeCisloText.x, hra.tvojeCisloText.y, nepratel.cislo)
-                for (i in 1..nepratel.cislo) {
-                    nepratel.cislo2--
-                    hra.tvojeCislo--
-                    delay(500L)
-                }
-            }
             addChild(nepratel)
 
             hra.casovacNepratele = 0
