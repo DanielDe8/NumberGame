@@ -28,6 +28,10 @@ import kotlinx.coroutines.*
 
 val hra = Hra()
 
+fun Stage.zacniHru() {
+    hra.zkoncilaHra = false
+}
+
 fun Stage.vytvorNepratele(hra: Hra): NepratelskeCislo {
     val nepratel2 =  NepratelskeCislo(
             Random.nextInt(1, 10),
@@ -44,11 +48,20 @@ class Hra() : Container() {
     var tvojeCislo = 1
     val tvojeCisloText = text("$tvojeCislo", 100.0)
 
+    var maxTvojeCislo = "0"
+    var maxTvojeCisloVeHre = tvojeCislo
+
+    var zkoncilaHra = false
+
     var casovacNepratele = 0
     val nepratele = arrayListOf<NepratelskeCislo>()
+    var odstranitNepratele = false
+
+    val sedyCtverec = solidRect(widthNum, heightNum, Colors["#000000BF"])
 
     init {
         fixedSizeContainer(widthNum.toDouble(), heightNum.toDouble())
+        sedyCtverec.removeFromParent()
     }
 }
 
@@ -68,12 +81,18 @@ class NepratelskeCislo(val cislo: Int, posX: Double, posY: Double) : Container()
             text.centerOn(rect)
             text.text = ("$cislo2")
 //            println(cislo)
+
+            if (hra.odstranitNepratele) {
+                removeFromParent()
+                hra.odstranitNepratele = false
+            }
         }
 
         onClick {
             cislo2 -= 1
             if (cislo2 < 1) {
                 hra.tvojeCislo += cislo
+                hra.maxTvojeCisloVeHre += cislo
                 removeFromParent()
             }
         }
@@ -88,36 +107,86 @@ suspend fun main() = Korge(
     ) {
     addChild(hra)
 
+    val storage = NativeStorage(views)
+
     hra.tvojeCisloText.x = width / 2 - (hra.tvojeCisloText.textSize / 2)
     hra.tvojeCisloText.y = width - hra.tvojeCisloText.textSize
     addFixedUpdater(60.timesPerSecond) {
-        hra.tvojeCisloText.text = ("${hra.tvojeCislo}")
-        hra.casovacNepratele++
+        if (hra.zkoncilaHra == false) {
+            hra.tvojeCisloText.text = ("${hra.tvojeCislo}")
+            hra.casovacNepratele++
 
-        if(hra.tvojeCislo < 1) {
-            //gameWindow.close()
-            text("Game Over!").apply {
-                fontSize = 80.0
+            if (hra.tvojeCislo < 1) {
+                //gameWindow.close()
+                hra.odstranitNepratele = true
+
+//                hra.tvojeCisloText.removeFromParent()
+                hra.nepratele.clear()
+
+                 container {
+                    val pozadi = solidRect(hra.widthNum, hra.heightNum, Colors["#2b2b2b"])
+                    val gameOverText = text("Game Over!").apply {
+                        fontSize = 80.0
+                        y = 100.0
+                        centerXOn(pozadi)
+                    }
+
+                    container {
+                        val rect = roundRect(300, 60, 20)
+                        val text = text("Play Again").apply {
+                            color = Colors["#2b2b2b"]
+                            fontSize = 55.0
+                        }.centerOn(rect).apply { y += 4 }
+
+                    }.apply {
+                        centerOn(gameOverText)
+                        y += 150
+                    }.onClick {
+                        this.removeFromParent()
+                        hra.tvojeCislo = 10
+                        hra.tvojeCisloText.text = "${hra.tvojeCislo}"
+//                        hra.tvojeCisloText.addTo(this@Korge)
+                        hra.zkoncilaHra = false
+                    }
+
+                    container {
+                        val rect = roundRect(200, 60, 20)
+                        val text = text("Quit").apply {
+                            color = Colors["#2b2b2b"]
+                            fontSize = 55.0
+                        }.centerOn(rect)
+
+                    }.apply {
+                        centerOn(gameOverText)
+                        y += 270
+                    }.onClick {
+                        gameWindow.close()
+                    }
+                }.centerOn(hra)
+
+                hra.zkoncilaHra = true
             }
-        }
 
-        for (n in hra.nepratele) {
-            n.x += (hra.tvojeCisloText.x - n.x) * 0.01
-            n.y += 2
-            if (n.y >= hra.tvojeCisloText.y) {
-                hra.tvojeCislo -= n.cislo2
-                n.removeFromParent()
+
+            for (n in hra.nepratele) {
+                n.x += (hra.tvojeCisloText.x - n.x) * 0.01
+                n.y += 2
+                if (n.y >= hra.tvojeCisloText.y) {
+                    hra.tvojeCislo -= n.cislo2
+                    n.removeFromParent()
+                }
             }
-        }
-        hra.nepratele.removeAll { n -> n.y >= hra.tvojeCisloText.y }
 
-        if (hra.casovacNepratele == 60 * 3) {
-            val nepratel = vytvorNepratele(hra)
-            hra.nepratele.add(nepratel)
+            hra.nepratele.removeAll { n -> n.y >= hra.tvojeCisloText.y }
 
-            addChild(nepratel)
+            if (hra.casovacNepratele == 60 * 3) {
+                val nepratel = vytvorNepratele(hra)
+                hra.nepratele.add(nepratel)
 
-            hra.casovacNepratele = 0
+                addChild(nepratel)
+
+                hra.casovacNepratele = 0
+            }
         }
     }
 }
